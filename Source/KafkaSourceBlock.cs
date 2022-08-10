@@ -10,35 +10,42 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
 {
     private readonly BufferBlock<Record<byte[], byte[]>> _messageBuffer = new();
     private readonly IConsumer<byte[], byte[]> _consumer;
-    private bool _keepConsuming = true;
     private readonly string _topic;
+    private readonly CancellationTokenSource _cancellationToken;
 
-    public KafkaSourceBlock(IConsumer<byte[], byte[]> consumer, string topic)
+    public KafkaSourceBlock(IConsumer<byte[], byte[]> consumer, 
+        string topic, 
+        CancellationTokenSource cancellationToken)
     {
         _consumer = consumer;
         _topic = topic;
+        _cancellationToken = cancellationToken;
     }
 
     public void Start()
     {
-        Task.Factory.StartNew(() =>
+        Task.Factory.StartNew(async () =>
         {
             _consumer.Subscribe(_topic);
-            while (_keepConsuming)
+            while (!_cancellationToken.IsCancellationRequested)
             { 
                 ConsumeResult<byte[], byte[]> consumeResult = _consumer.Consume(TimeSpan.FromSeconds(5));
-                Record<byte[], byte[]> record = new Record<byte[], byte[]>(consumeResult);
-                Console.WriteLine("Consumed a record " + record);
+                if (consumeResult != null)
+                {
+                    Record<byte[], byte[]> record = new Record<byte[], byte[]>(consumeResult);
+                    Console.WriteLine("Consumed a record " + record);
 
-                _messageBuffer.Post(record);
+                    await _messageBuffer.SendAsync(record);
+                }
             }
+            Console.WriteLine("Dropping out of consume loop");
         });
     }
 
     public void Complete()
     {
         Console.WriteLine("Complete on the SourceBlock called");
-        _keepConsuming = false;
+        _cancellationToken.Cancel();
         _consumer.Close();
         _messageBuffer.Complete();
     }
@@ -52,7 +59,6 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
     {
         get
         {
-            _keepConsuming = false;
             _consumer.Close();
             return _messageBuffer.Completion;
         }
@@ -67,7 +73,6 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
 
     public IDisposable LinkTo(ITargetBlock<Record<byte[], byte[]>> target, DataflowLinkOptions linkOptions)
     {
-        Console.WriteLine("SourceBlock now linked to " + target);
         return _messageBuffer.LinkTo(target, linkOptions);
     }
 

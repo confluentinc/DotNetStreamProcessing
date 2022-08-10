@@ -6,7 +6,7 @@ namespace TplKafka.Client;
 public class CommitObserver : IObserver<Record<byte[],byte[]>>
 {
     private long _latestTimestamp = Int64.MinValue;
-    private long _lastCommitTime = 0;
+    private long _lastCommitTime;
     private readonly long _commitInterval = 30_000L;
     private readonly IConsumer<byte[], byte[]> _commitHandler;
     private Dictionary<TopicPartition, TopicPartitionOffset> _commitDictionary = new();

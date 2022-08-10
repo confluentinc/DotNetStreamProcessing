@@ -8,26 +8,27 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
 {
     private readonly BufferBlock<Record<byte[], byte[]>> _messageBuffer = new();
     private readonly IProducer<byte[], byte[]> _producer;
-    private bool _keepProducing = true;
     private readonly string _outputTopic;
     private readonly  IObserver<Record<byte[],byte[]>>_commitObserver;
+    private readonly CancellationTokenSource _cancellationToken;
 
     public KafkaSinkBlock(IProducer<byte[], byte[]> producer, string outputTopic,
-        IObserver<Record<byte[], byte[]>> commitObserver)
+        IObserver<Record<byte[], byte[]>> commitObserver,
+        CancellationTokenSource cancellationToken)
     {
         _producer = producer;
         _outputTopic = outputTopic;
         _commitObserver = commitObserver;
+        _cancellationToken = cancellationToken;
     }
 
     public void Start()
     {
-        Task.Factory.StartNew(() =>
+        Task.Factory.StartNew(async () =>
         {
-            while (_keepProducing)
+            while (!_cancellationToken.IsCancellationRequested)
             {
-                Record<byte[], byte[]> record =  _messageBuffer.Receive();
-                Console.WriteLine("Record from source block " + record);
+                Record<byte[], byte[]> record = await _messageBuffer.ReceiveAsync();
                 Action<DeliveryReport<byte[], byte[]>> handler = r =>
                 {
                     if (!r.Error.IsError)
@@ -35,9 +36,10 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
                     else
                         Console.WriteLine( $"Delivery Error: {r.Error.Reason}");
                 };
-                   
+                
                 _producer.Produce(_outputTopic, new Message<byte[], byte[]>{ Key = record.Key, Value = record.Value}, handler);
             }
+            Console.WriteLine("Dropping out of the produce loop");
         });
     }
 
@@ -51,7 +53,6 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
     public void Complete()
     {
         Console.WriteLine("Complete on the SinkBlock called");
-        _keepProducing = false;
         _producer.Flush();
         _producer.Dispose();
         _messageBuffer.Complete();
@@ -66,7 +67,6 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
     {
         get
         {
-            _keepProducing = false;
             _producer.Flush();
             _producer.Dispose();
             return _messageBuffer.Completion;
