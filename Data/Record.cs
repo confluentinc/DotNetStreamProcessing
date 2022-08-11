@@ -9,10 +9,10 @@ public class Record<TKey, TValue>
     public TValue Value { get; }
 
     public Timestamp Timestamp { get; }
-    
-    
+
     public TopicPartitionOffset TopicPartitionOffset { get; }
-    
+
+    public TopicPartition TopicPartition => TopicPartitionOffset.TopicPartition;
 
     public Record(ConsumeResult<TKey, TValue> consumeResult)
     {

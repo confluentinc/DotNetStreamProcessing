@@ -3,13 +3,25 @@ using TplKafka.Data;
 
 namespace TplKafka.Client;
 
+/// <summary>
+/// Commits records every 30 seconds.
+/// The <code>CommitObserver</code> uses the timestamps
+/// of the original <see cref="Message{TKey,TValue}"/> to determine
+/// when to commit.
+/// The <code>CommitObserver</code> uses the same
+/// <see cref="IConsumer{TKey,TValue}"/> instance that the
+/// <see cref="TplKafka.Source.KafkaSourceBlock"/> and the <see cref="TplKafka.Source.InOrderKafkaSourceBlock"/>
+/// use for consuming source records.
+/// The <code>IConsumer.Commit(IEnumerable@lt;TopicPartitionOffset@gt; offsets);</code> method is used 
+/// </summary>
+
 public class CommitObserver : IObserver<Record<byte[],byte[]>>
 {
     private long _latestTimestamp = Int64.MinValue;
     private long _lastCommitTime;
     private readonly long _commitInterval = 30_000L;
     private readonly IConsumer<byte[], byte[]> _commitHandler;
-    private Dictionary<TopicPartition, TopicPartitionOffset> _commitDictionary = new();
+    private readonly Dictionary<TopicPartition, TopicPartitionOffset> _commitDictionary = new();
 
     public CommitObserver(IConsumer<byte[], byte[]> commitHandler)
     {
@@ -47,13 +59,11 @@ public class CommitObserver : IObserver<Record<byte[],byte[]>>
             _commitDictionary[tp] = tpo;
         }
 
-        if (_latestTimestamp - _lastCommitTime >= _commitInterval)
-        {
-            Console.WriteLine("!!Time to commit!! Current Time " + _latestTimestamp + " Last commit " + _lastCommitTime);
-            _commitHandler.Commit(_commitDictionary.Values);
-            _commitDictionary.Clear();
-            _lastCommitTime = _latestTimestamp;
-        }
+        if (_latestTimestamp - _lastCommitTime < _commitInterval) return;
+        Console.WriteLine("!!Time to commit!! Current Time " + _latestTimestamp + " Last commit " + _lastCommitTime);
+        _commitHandler.Commit(_commitDictionary.Values);
+        _commitDictionary.Clear();
+        _lastCommitTime = _latestTimestamp;
 
     }
 }

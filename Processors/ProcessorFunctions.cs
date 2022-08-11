@@ -1,17 +1,17 @@
-using System.Numerics;
 using System.Security.Cryptography;
-using System.Text.Json;
-using System.Threading.Tasks.Dataflow;
 using Confluent.Kafka;
-using Confluent.Kafka.Admin;
+using Google.Protobuf;
 using Io.Confluent.Developer.Proto;
 using Newtonsoft.Json;
 using TplKafka.Data;
-using System.Text;
-using Google.Protobuf;
 
 namespace TplKafka.Processors;
-
+/// <summary>
+/// Class containing the various functions that a
+/// Dataflow block uses to accomplish its task
+/// </summary>
+/// <typeparam name="TKey"></typeparam>
+/// <typeparam name="TValue"></typeparam>
 public static class ProcessorFunctions<TKey, TValue>
 {
     public static Func<Record<byte[], byte[]>, Record<TKey, TValue>> DeserializeFunc(

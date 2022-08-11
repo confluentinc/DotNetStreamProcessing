@@ -3,7 +3,11 @@ using Confluent.Kafka;
 using TplKafka.Data;
 
 namespace TplKafka.Sink;
-
+/// <summary>
+/// The <see cref="KafkaSinkBlock"/> is the final node in the Dataflow topology.
+/// It wraps a <see cref="IProducer{TKey,TValue}"/> for producing back to Kafka
+/// and uses a <see cref="BufferBlock{T}"/> as a delegate for the Dataflow block.
+/// </summary>
 public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
 {
     private readonly BufferBlock<Record<byte[], byte[]>> _messageBuffer = new();
@@ -29,6 +33,7 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
             while (!_cancellationToken.IsCancellationRequested)
             {
                 Record<byte[], byte[]> record = await _messageBuffer.ReceiveAsync();
+                // The handler is used to pass a successfully produced record to the CommitObserver
                 Action<DeliveryReport<byte[], byte[]>> handler = r =>
                 {
                     if (!r.Error.IsError)

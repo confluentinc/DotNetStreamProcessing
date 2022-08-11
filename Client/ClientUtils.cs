@@ -21,13 +21,12 @@ public static class ClientUtils
         var lines = LoadPropertiesFile(configFilePath);
         foreach (var line in lines)
         {
-            if (!line.StartsWith("#") && !String.IsNullOrEmpty(line))
-            {
-                Console.WriteLine("property [" + line +"]");
-                var parts = line.Split("=");
-                baseConfigs.Add(parts[0], parts[1]);
-            }
-            
+            var trimmedLine = line.Trim();
+            if (trimmedLine.Trim().StartsWith("#") || string.IsNullOrEmpty(trimmedLine)) continue;
+            Console.WriteLine("property [" + trimmedLine +"]");
+            var parts = line.Split("=");
+            baseConfigs.Add(parts[0].Trim(), parts[1].Trim());
+
         }
 
         return baseConfigs;
