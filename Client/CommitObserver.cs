@@ -12,7 +12,8 @@ namespace TplKafka.Client;
 /// <see cref="IConsumer{TKey,TValue}"/> instance that the
 /// <see cref="TplKafka.Source.KafkaSourceBlock"/> and the <see cref="TplKafka.Source.InOrderKafkaSourceBlock"/>
 /// use for consuming source records.
-/// The <code>IConsumer.Commit(IEnumerable@lt;TopicPartitionOffset@gt; offsets);</code> method is used 
+/// The <code>IConsumer.Commit(IEnumerable@lt;TopicPartitionOffset@gt; offsets);</code> method
+/// (which is thread-safe) is used to execute the commit.
 /// </summary>
 
 public class CommitObserver : IObserver<Record<byte[],byte[]>>
