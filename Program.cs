@@ -14,6 +14,13 @@ using DataflowLinkOptions = System.Threading.Tasks.Dataflow.DataflowLinkOptions;
 
 namespace TplKafka
 {
+    /// <summary>
+    /// Main class used to run the Kafka TPL Dataflow integration
+    /// NOTE: You have to pass in a path to a config file used for connecting to Kafka.
+    /// It's assumed that you'll use the properties similar to those generated in the client section of
+    /// Confluent Cloud.  Also it's expecting data in JSON format from the Confluent Datagen
+    /// Source Connector with the Purchases schema
+    /// </summary>
     static class TplKafkaStreaming
     {
         static void Main(string[] args)
