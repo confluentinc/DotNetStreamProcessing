@@ -10,17 +10,22 @@ namespace TplKafka.Source;
 /// The order of processing follows the order of records as consumed
 /// i.e there is no ordering of records.
 /// For ordered processing by topic-partition <see cref="InOrderKafkaSourceBlock"/>
-/// AutoCommit should be set to "false".  The <see cref="TplKafka.Client.CommitObserver"/>
-/// will commit after a successful produce request.
+/// enable.auto.commit should be set to "true" and enable.auto.offset.store should be set to "false" <see cref="OffsetHandler"/>
+/// After a successful produce request the original offset for the record is passed to the OffsetHandler
+/// and the Consumer will commit the offsets stored there in the next auto-commit interval 
 /// </summary>
 
 public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
 {
+    private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+    
     private readonly BufferBlock<Record<byte[], byte[]>> _messageBuffer = new();
     private readonly IConsumer<byte[], byte[]> _consumer;
     private readonly string _topic;
     private readonly CancellationTokenSource _cancellationToken;
     private const int RetryBackoff = 2000;
+    private long _recordsConsumed;
+    private bool _wasBlocked;
 
     public KafkaSourceBlock(IConsumer<byte[], byte[]> consumer, 
         string topic, 
@@ -44,10 +49,23 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
 
                 while (!_messageBuffer.Post(record))
                 {
+                    Logger.Debug("message buffer full, blocking until available");
+                    _wasBlocked = true;
                     Thread.Sleep(RetryBackoff);
                 }
+
+                if (_wasBlocked)
+                {
+                    Logger.Info("message buffer accepting records again");
+                    _wasBlocked = false;
+                }
+
+                if (_recordsConsumed++ % 1000 == 0)
+                {
+                    Logger.Info($"{_recordsConsumed} total number of records consumed so far");
+                }
             }
-            Console.WriteLine("Dropping out of consume loop");
+            Logger.Info("Dropping out of consume loop");
         });
     }
 
@@ -56,6 +74,7 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
         Console.WriteLine("Complete on the SourceBlock called");
         _cancellationToken.Cancel();
         _consumer.Close();
+        _consumer.Dispose();
         _messageBuffer.Complete();
     }
 
@@ -69,6 +88,7 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
         get
         {
             _consumer.Close();
+            _consumer.Dispose();
             return _messageBuffer.Completion;
         }
     }

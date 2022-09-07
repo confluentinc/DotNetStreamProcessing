@@ -10,32 +10,34 @@ public class Record<TKey, TValue>
 
     public Timestamp Timestamp { get; }
 
-    public TopicPartitionOffset TopicPartitionOffset { get; }
+    public TopicPartitionOffset SourceTopicPartitionOffset { get; }
 
-    public TopicPartition TopicPartition => TopicPartitionOffset.TopicPartition;
+    public TopicPartition TopicPartition => SourceTopicPartitionOffset.TopicPartition;
+
+    public Offset SourceOffset => SourceTopicPartitionOffset.Offset;
 
     public Record(ConsumeResult<TKey, TValue> consumeResult)
     {
         Key = consumeResult.Message.Key;
         Value = consumeResult.Message.Value;
-        TopicPartitionOffset = consumeResult.TopicPartitionOffset;
+        SourceTopicPartitionOffset = consumeResult.TopicPartitionOffset;
         Timestamp = consumeResult.Message.Timestamp;
     }
 
     public Record(TKey key, 
         TValue value, 
         Timestamp timestamp, 
-        TopicPartitionOffset topicPartitionOffset)
+        TopicPartitionOffset sourceTopicPartitionOffset)
     {
         Key = key;
         Value = value;
         Timestamp = timestamp;
-        TopicPartitionOffset = topicPartitionOffset;
+        SourceTopicPartitionOffset = sourceTopicPartitionOffset;
     }
 
     public override string ToString()
     {
-        return TopicPartitionOffset+ ": "+Key + ": " + Value;
+        return SourceTopicPartitionOffset+ ": "+Key + ": " + Value;
     }
     
 }

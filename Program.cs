@@ -23,11 +23,12 @@ namespace TplKafka
     /// </summary>
     static class TplKafkaStreaming
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
         static void Main(string[] args)
         {
             if (args.Length == 0)
             {
-                Console.WriteLine("Must provide the path for the properties file for connection");
+                Logger.Error("Must provide the path for the properties file for connection");
                 return;
             }
 
@@ -35,16 +36,20 @@ namespace TplKafka
             var consumerConfig = ClientUtils.ConsumerConfig(path);
             var producerConfig = ClientUtils.ProducerConfig(path);
 
-            consumerConfig.EnableAutoCommit = false;
-            consumerConfig.GroupId = "tpl-consumer-groupY";
+            consumerConfig.EnableAutoCommit = true;
+            consumerConfig.EnableAutoOffsetStore = false;
+            consumerConfig.AutoCommitIntervalMs = 30_000;
+            
+            consumerConfig.GroupId = "tpl-consumer-group";
 
             var consumer = new ConsumerBuilder<byte[], byte[]>(consumerConfig).Build();
             var producer = new ProducerBuilder<byte[], byte[]>(producerConfig).Build();
-            var commitObserver = new CommitObserver(consumer);
+            var commitObserver = new OffsetHandler(consumer);
 
             var desFunc = ProcessorFunctions<string, string>.DeserializeFunc(Deserializers.Utf8, Deserializers.Utf8);
             var protoSerFunc = ProcessorFunctions<string, Purchase>.SerializeProtoFunc(Serializers.Utf8);
             var mappingFunc = ProcessorFunctions<string, string>.MapPurchase();
+            var addBonusFunc = ProcessorFunctions<string, Record<string, Purchase>>.AddBonus();
 
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
             var parallelizationBlockOptions = new ExecutionDataflowBlockOptions()
@@ -58,23 +63,27 @@ namespace TplKafka
                 new TransformBlock<Record<string, Purchase>, Record<byte[], byte[]>>(protoSerFunc,
                     parallelizationBlockOptions);
             var mapToPurchaseBlock =
-                new TransformBlock<Record<string, string>, Record<string, Purchase>>(mappingFunc, standardBlockOptions);
+                new TransformBlock<Record<string, string>, Record<string, Purchase>>(mappingFunc, parallelizationBlockOptions);
+            var addBonusBlock =
+                new TransformBlock<Record<string, Purchase>, Record<string, Purchase>>(addBonusFunc,
+                    parallelizationBlockOptions);
 
             var cancellationToken = new CancellationTokenSource();
 
             KafkaSourceBlock sourceBlock = new(consumer, "tpl-input", cancellationToken);
             //InOrderKafkaSourceBlock sourceBlock = new(consumer, "tpl-input", cancellationToken);
-            Console.WriteLine("Starting the source block");
+            Logger.Info("Starting the source block");
             sourceBlock.Start();
 
             KafkaSinkBlock sinkBlock = new(producer, "tpl-output", commitObserver, cancellationToken);
-            Console.WriteLine("Starting the sink block");
+            Logger.Info("Starting the sink block");
             sinkBlock.Start();
 
             sourceBlock.LinkTo(deserializeBlock, linkOptions);
             deserializeBlock.LinkTo(mapToPurchaseBlock, linkOptions);
-            mapToPurchaseBlock.LinkTo(serializeBlock, linkOptions, input => input.Value.Quantity > 1);
-            mapToPurchaseBlock.LinkTo(DataflowBlock.NullTarget<Record<string, Purchase>>());
+            mapToPurchaseBlock.LinkTo(addBonusBlock, linkOptions, input => input.Value.Quantity > 2);
+            mapToPurchaseBlock.LinkTo(serializeBlock, linkOptions);
+            addBonusBlock.LinkTo(serializeBlock, linkOptions);
             serializeBlock.LinkTo(sinkBlock, linkOptions);
             Console.WriteLine("Hit any key to quit the program");
             Console.ReadKey();

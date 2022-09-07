@@ -10,6 +10,7 @@ namespace TplKafka.Sink;
 /// </summary>
 public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
 {
+    private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
     private readonly BufferBlock<Record<byte[], byte[]>> _messageBuffer = new();
     private readonly IProducer<byte[], byte[]> _producer;
     private readonly string _outputTopic;
@@ -28,23 +29,23 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
 
     public void Start()
     {
-        Task.Factory.StartNew(async () =>
+        Task.Factory.StartNew( () =>
         {
             while (!_cancellationToken.IsCancellationRequested)
             {
-                Record<byte[], byte[]> record = await _messageBuffer.ReceiveAsync();
+                Record<byte[], byte[]> record = _messageBuffer.Receive(_cancellationToken.Token);
                 // The handler is used to pass a successfully produced record to the CommitObserver
                 Action<DeliveryReport<byte[], byte[]>> handler = r =>
                 {
                     if (!r.Error.IsError)
                         _commitObserver.OnNext(record);
                     else
-                        Console.WriteLine( $"Delivery Error: {r.Error.Reason}");
+                        Logger.Error( $"Delivery Error: {r.Error.Reason}");
                 };
                 
                 _producer.Produce(_outputTopic, new Message<byte[], byte[]>{ Key = record.Key, Value = record.Value}, handler);
             }
-            Console.WriteLine("Dropping out of the produce loop");
+            Logger.Info("Dropping out of the produce loop");
         });
     }
 

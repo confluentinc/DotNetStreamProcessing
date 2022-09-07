@@ -14,6 +14,7 @@ namespace TplKafka.Processors;
 /// <typeparam name="TValue"></typeparam>
 public static class ProcessorFunctions<TKey, TValue>
 {
+    
     public static Func<Record<byte[], byte[]>, Record<TKey, TValue>> DeserializeFunc(
         IDeserializer<TKey> keyDeserializer, IDeserializer<TValue> valueDeserializer)
     {
@@ -22,7 +23,7 @@ public static class ProcessorFunctions<TKey, TValue>
             var desKey = keyDeserializer.Deserialize(record.Key, record.Key == null, SerializationContext.Empty);
             var desValue =
                 valueDeserializer.Deserialize(record.Value, record.Value == null, SerializationContext.Empty);
-            return new Record<TKey, TValue>(desKey, desValue, record.Timestamp, record.TopicPartitionOffset);
+            return new Record<TKey, TValue>(desKey, desValue, record.Timestamp, record.SourceTopicPartitionOffset);
         };
     }
 
@@ -34,7 +35,7 @@ public static class ProcessorFunctions<TKey, TValue>
             var serKey = keySerializer.Serialize(record.Key, SerializationContext.Empty);
             var serValue =
                 valueSerializer.Serialize(record.Value, SerializationContext.Empty);
-            return new Record<byte[], byte[]>(serKey, serValue, record.Timestamp, record.TopicPartitionOffset);
+            return new Record<byte[], byte[]>(serKey, serValue, record.Timestamp, record.SourceTopicPartitionOffset);
         };
     }
 
@@ -45,7 +46,24 @@ public static class ProcessorFunctions<TKey, TValue>
         {
             var serKey = keySerializer.Serialize(input.Key, SerializationContext.Empty);
             var serValue = input.Value.ToByteArray();
-            return new Record<byte[], byte[]>(serKey, serValue, input.Timestamp, input.TopicPartitionOffset);
+            return new Record<byte[], byte[]>(serKey, serValue, input.Timestamp, input.SourceTopicPartitionOffset);
+        };
+    }
+
+    public static Func<Record<string, Purchase>, Record<string, Purchase>> AddBonus()
+    {
+        return inputRecord =>
+        {
+            var updatedPurchase = new Purchase()
+            {
+                Id = inputRecord.Value.Id,
+                Item = inputRecord.Value.Item,
+                Quantity = inputRecord.Value.Quantity,
+                PricePerUnit = inputRecord.Value.PricePerUnit,
+                Bonus = inputRecord.Value.Quantity * 4.5
+            };
+            return new Record<string, Purchase>(inputRecord.Key, updatedPurchase, inputRecord.Timestamp,
+                inputRecord.SourceTopicPartitionOffset);
         };
     }
 
@@ -60,9 +78,10 @@ public static class ProcessorFunctions<TKey, TValue>
                 Id = (long) jsonPurchase["id"],
                 Item = (string) jsonPurchase["item_type"],
                 Quantity = (long) jsonPurchase["quantity"],
-                PricePerUnit = RandomNumberGenerator.GetInt32(2, 50)
+                PricePerUnit = RandomNumberGenerator.GetInt32(2, 50),
+                Bonus = 0.0
             };
-            return new Record<string, Purchase>(input.Key, purchase, input.Timestamp, input.TopicPartitionOffset);
+            return new Record<string, Purchase>(input.Key, purchase, input.Timestamp, input.SourceTopicPartitionOffset);
         };
     }
     

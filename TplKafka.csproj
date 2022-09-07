@@ -15,9 +15,16 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="NLog" Version="5.0.2" />
+        <PackageReference Include="NLog.Extensions.Logging" Version="5.0.2" />
         <PackageReference Include="System.Threading.Tasks.Dataflow" Version="6.0.0" />
     </ItemGroup>
     <ItemGroup>
         <Protobuf Include="proto/*.proto" GrpcServices="None" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Update="NLog.config">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 </Project>

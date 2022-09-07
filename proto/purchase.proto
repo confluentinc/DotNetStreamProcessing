@@ -9,4 +9,5 @@ message Purchase {
   string item = 2;
   int64  quantity = 3;
   double price_per_unit = 4;
+  double bonus = 5;
 }
