@@ -50,23 +50,6 @@ public static class ProcessorFunctions<TKey, TValue>
         };
     }
 
-    public static Func<Record<string, Purchase>, Record<string, Purchase>> AddBonus()
-    {
-        return inputRecord =>
-        {
-            var updatedPurchase = new Purchase()
-            {
-                Id = inputRecord.Value.Id,
-                Item = inputRecord.Value.Item,
-                Quantity = inputRecord.Value.Quantity,
-                PricePerUnit = inputRecord.Value.PricePerUnit,
-                Bonus = inputRecord.Value.Quantity * 4.5
-            };
-            return new Record<string, Purchase>(inputRecord.Key, updatedPurchase, inputRecord.Timestamp,
-                inputRecord.SourceTopicPartitionOffset);
-        };
-    }
-
     public static Func<Record<string, string>, Record<string, Purchase>> MapPurchase()
     {
         RandomNumberGenerator.Create();
