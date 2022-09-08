@@ -8,11 +8,9 @@ namespace TplKafka.Source;
 /// <summary>
 /// The source for a Dataflow TPL topology of blocks
 /// The order of processing follows the order of records as consumed
-/// i.e there is no ordering of records.
-/// For ordered processing by topic-partition <see cref="InOrderKafkaSourceBlock"/>
-/// enable.auto.commit should be set to "true" and enable.auto.offset.store should be set to "false" <see cref="OffsetHandler"/>
+/// enable.auto.commit should be set to "true" and enable.auto.offset.store should be set to "false" <see cref="TplKafka.Client.OffsetHandler"/>
 /// After a successful produce request the original offset for the record is passed to the OffsetHandler
-/// and the Consumer will commit the offsets stored there in the next auto-commit interval 
+/// and the Consumer will commit the offsets manually stored using Consumer.StoreOffset 
 /// </summary>
 
 public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
