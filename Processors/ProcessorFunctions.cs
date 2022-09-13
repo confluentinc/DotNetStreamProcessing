@@ -14,6 +14,7 @@ namespace TplKafka.Processors;
 /// <typeparam name="TValue"></typeparam>
 public static class ProcessorFunctions<TKey, TValue>
 {
+    private static readonly Random  _randomNumberGenerator = Random.Shared;
     
     public static Func<Record<byte[], byte[]>, Record<TKey, TValue>> DeserializeFunc(
         IDeserializer<TKey> keyDeserializer, IDeserializer<TValue> valueDeserializer)
@@ -61,11 +62,23 @@ public static class ProcessorFunctions<TKey, TValue>
                 Id = (long) jsonPurchase["id"],
                 Item = (string) jsonPurchase["item_type"],
                 Quantity = (long) jsonPurchase["quantity"],
-                PricePerUnit = RandomNumberGenerator.GetInt32(2, 50),
+                PricePerUnit = _randomNumberGenerator.Next(2, 50),
                 Bonus = 0.0
             };
             return new Record<string, Purchase>(input.Key, purchase, input.Timestamp, input.SourceTopicPartitionOffset);
         };
     }
-    
+  /// <summary>
+  /// This Func represents a simulated remote service call
+  /// </summary>
+  /// <returns></returns>
+    public static Func<Record<string, Purchase>, Record<string, Purchase>> SimulatedRemoteService()
+    {
+        return (input) =>
+        {
+            Thread.Sleep(_randomNumberGenerator.Next(1, 3));
+            return input;
+        };
+    }
+
 }

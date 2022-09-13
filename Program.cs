@@ -49,6 +49,7 @@ namespace TplKafka
             var desFunc = ProcessorFunctions<string, string>.DeserializeFunc(Deserializers.Utf8, Deserializers.Utf8);
             var protoSerFunc = ProcessorFunctions<string, Purchase>.SerializeProtoFunc(Serializers.Utf8);
             var mappingFunc = ProcessorFunctions<string, string>.MapPurchase();
+            var remoteServiceFunc = ProcessorFunctions<string, Purchase>.SimulatedRemoteService();
 
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
             var parallelizationBlockOptions = new ExecutionDataflowBlockOptions()
@@ -63,6 +64,9 @@ namespace TplKafka
                     parallelizationBlockOptions);
             var mapToPurchaseBlock =
                 new TransformBlock<Record<string, string>, Record<string, Purchase>>(mappingFunc, standardBlockOptions);
+            var simulatedRemoteServiceBlock =
+                new TransformBlock<Record<string, Purchase>, Record<string, Purchase>>(remoteServiceFunc,
+                    parallelizationBlockOptions);
 
             var cancellationToken = new CancellationTokenSource();
 
@@ -77,7 +81,8 @@ namespace TplKafka
 
             sourceBlock.LinkTo(deserializeBlock, linkOptions);
             deserializeBlock.LinkTo(mapToPurchaseBlock, linkOptions);
-            mapToPurchaseBlock.LinkTo(serializeBlock, linkOptions);
+            mapToPurchaseBlock.LinkTo(simulatedRemoteServiceBlock, linkOptions);
+            simulatedRemoteServiceBlock.LinkTo(serializeBlock, linkOptions);
             serializeBlock.LinkTo(sinkBlock, linkOptions);
             Console.WriteLine("Hit any key to quit the program");
             Console.ReadKey();
