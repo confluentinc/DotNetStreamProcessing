@@ -39,8 +39,11 @@ namespace TplKafka
             consumerConfig.EnableAutoCommit = true;
             consumerConfig.EnableAutoOffsetStore = false;
             consumerConfig.AutoCommitIntervalMs = 30_000;
+            consumerConfig.AutoOffsetReset = AutoOffsetReset.Earliest;
+            consumerConfig.ClientId = "tplConsumer-AOWC";
+            consumerConfig.GroupId = "tplConsumerGroup-AOWC";
             
-            consumerConfig.GroupId = "tpl-consumer-group";
+            var cancellationToken = new CancellationTokenSource();
 
             var consumer = new ConsumerBuilder<byte[], byte[]>(consumerConfig).Build();
             var producer = new ProducerBuilder<byte[], byte[]>(producerConfig).Build();
@@ -54,28 +57,27 @@ namespace TplKafka
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
             var parallelizationBlockOptions = new ExecutionDataflowBlockOptions()
                 {BoundedCapacity = 10_000, MaxDegreeOfParallelism = 4};
+            var parallelizationAnyOrderBlockOptions = new ExecutionDataflowBlockOptions()
+                {BoundedCapacity = 10_000, MaxDegreeOfParallelism = 4, EnsureOrdered = false};
             var standardBlockOptions = new ExecutionDataflowBlockOptions() {BoundedCapacity = 10_000};
 
             var deserializeBlock =
                 new TransformBlock<Record<byte[], byte[]>, Record<string, string>>(desFunc,
-                    parallelizationBlockOptions);
+                    parallelizationAnyOrderBlockOptions);
             var serializeBlock =
                 new TransformBlock<Record<string, Purchase>, Record<byte[], byte[]>>(protoSerFunc,
-                    parallelizationBlockOptions);
+                    parallelizationAnyOrderBlockOptions);
             var mapToPurchaseBlock =
-                new TransformBlock<Record<string, string>, Record<string, Purchase>>(mappingFunc, standardBlockOptions);
+                new TransformBlock<Record<string, string>, Record<string, Purchase>>(mappingFunc, parallelizationAnyOrderBlockOptions);
             var simulatedRemoteServiceBlock =
                 new TransformBlock<Record<string, Purchase>, Record<string, Purchase>>(remoteServiceFunc,
-                    parallelizationBlockOptions);
-
-            var cancellationToken = new CancellationTokenSource();
-
-            KafkaSourceBlock sourceBlock = new(consumer, "tpl-input", cancellationToken);
-            //InOrderKafkaSourceBlock sourceBlock = new(consumer, "tpl-input", cancellationToken);
+                    parallelizationAnyOrderBlockOptions);
+            
+            KafkaSourceBlock sourceBlock = new(consumer, "tpl_input", cancellationToken, 100_000);
             Logger.Info("Starting the source block");
             sourceBlock.Start();
 
-            KafkaSinkBlock sinkBlock = new(producer, "tpl-output", commitObserver, cancellationToken);
+            KafkaSinkBlock sinkBlock = new(producer, "tpl_output", commitObserver, cancellationToken);
             Logger.Info("Starting the sink block");
             sinkBlock.Start();
 
@@ -84,6 +86,7 @@ namespace TplKafka
             mapToPurchaseBlock.LinkTo(simulatedRemoteServiceBlock, linkOptions);
             simulatedRemoteServiceBlock.LinkTo(serializeBlock, linkOptions);
             serializeBlock.LinkTo(sinkBlock, linkOptions);
+            Logger.Info($"Start processing 1 million records at {DateTime.Now}");
             Console.WriteLine("Hit any key to quit the program");
             Console.ReadKey();
             cancellationToken.Cancel();

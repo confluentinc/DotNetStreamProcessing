@@ -58,7 +58,7 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
 
     public void Complete()
     {
-        Console.WriteLine("Complete on the SinkBlock called");
+        Logger.Info("Complete on the SinkBlock called");
         _producer.Flush();
         _producer.Dispose();
         _messageBuffer.Complete();

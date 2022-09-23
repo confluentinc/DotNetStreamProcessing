@@ -3,6 +3,7 @@ using Confluent.Kafka;
 using Google.Protobuf;
 using Io.Confluent.Developer.Proto;
 using Newtonsoft.Json;
+using NLog;
 using TplKafka.Data;
 
 namespace TplKafka.Processors;
@@ -15,16 +16,24 @@ namespace TplKafka.Processors;
 public static class ProcessorFunctions<TKey, TValue>
 {
     private static readonly Random  _randomNumberGenerator = Random.Shared;
-    
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     public static Func<Record<byte[], byte[]>, Record<TKey, TValue>> DeserializeFunc(
         IDeserializer<TKey> keyDeserializer, IDeserializer<TValue> valueDeserializer)
     {
         return (record) =>
         {
-            var desKey = keyDeserializer.Deserialize(record.Key, record.Key == null, SerializationContext.Empty);
-            var desValue =
-                valueDeserializer.Deserialize(record.Value, record.Value == null, SerializationContext.Empty);
-            return new Record<TKey, TValue>(desKey, desValue, record.Timestamp, record.SourceTopicPartitionOffset);
+            try
+            {
+                var desKey = keyDeserializer.Deserialize(record.Key, record.Key == null, SerializationContext.Empty);
+                var desValue =
+                    valueDeserializer.Deserialize(record.Value, record.Value == null, SerializationContext.Empty);
+                return new Record<TKey, TValue>(desKey, desValue, record.Timestamp, record.SourceTopicPartitionOffset);
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"Error in the deserialization process {e} with record {record}");
+                throw new Exception("Error deserialization", e);
+            }
         };
     }
 
@@ -39,7 +48,12 @@ public static class ProcessorFunctions<TKey, TValue>
             return new Record<byte[], byte[]>(serKey, serValue, record.Timestamp, record.SourceTopicPartitionOffset);
         };
     }
-
+    /// <summary>
+    /// Only have the key serializer specified as we're relying on Protobuf's toByteArray functionality
+    /// to serialize the value
+    /// </summary>
+    /// <param name="keySerializer"></param>
+    /// <returns></returns>
     public static Func<Record<TKey, Purchase>, Record<byte[], byte[]>> SerializeProtoFunc(
         ISerializer<TKey> keySerializer)
     {
@@ -62,8 +76,7 @@ public static class ProcessorFunctions<TKey, TValue>
                 Id = (long) jsonPurchase["id"],
                 Item = (string) jsonPurchase["item_type"],
                 Quantity = (long) jsonPurchase["quantity"],
-                PricePerUnit = _randomNumberGenerator.Next(2, 50),
-                Bonus = 0.0
+                PricePerUnit = _randomNumberGenerator.Next(10, 51)
             };
             return new Record<string, Purchase>(input.Key, purchase, input.Timestamp, input.SourceTopicPartitionOffset);
         };
@@ -76,7 +89,7 @@ public static class ProcessorFunctions<TKey, TValue>
     {
         return (input) =>
         {
-            Thread.Sleep(_randomNumberGenerator.Next(1, 3));
+            Thread.Sleep(_randomNumberGenerator.Next(1, 4));
             return input;
         };
     }

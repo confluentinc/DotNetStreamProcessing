@@ -1,6 +1,7 @@
 
 using System.Threading.Tasks.Dataflow;
 using Confluent.Kafka;
+using NLog.Fluent;
 using TplKafka.Data;
 
 
@@ -24,14 +25,17 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
     private const int RetryBackoff = 2000;
     private long _recordsConsumed;
     private bool _wasBlocked;
+    private int _consumeReportInterval;
 
     public KafkaSourceBlock(IConsumer<byte[], byte[]> consumer, 
         string topic, 
-        CancellationTokenSource cancellationToken)
+        CancellationTokenSource cancellationToken,
+        int consumeReportInterval)
     {
         _consumer = consumer;
         _topic = topic;
         _cancellationToken = cancellationToken;
+        _consumeReportInterval = consumeReportInterval;
     }
 
     public void Start()
@@ -39,12 +43,22 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
         Task.Factory.StartNew( () =>
         {
             _consumer.Subscribe(_topic);
+            Logger.Info("Subscribed to topic");
             while (!_cancellationToken.IsCancellationRequested)
-            { 
-                var consumeResult = _consumer.Consume(TimeSpan.FromSeconds(5));
+            {
+                var consumeResult = new ConsumeResult<byte[], byte[]>();
+                try
+                {
+                    consumeResult = _consumer.Consume(TimeSpan.FromSeconds(5));
+                }
+                catch (ConsumeException exception)
+                {
+                    Logger.Error($"Error consuming {exception}");
+                    Logger.Info("Cancelling now");
+                    _cancellationToken.Cancel();
+                }
                 if (consumeResult == null) continue;
                 var record = new Record<byte[], byte[]>(consumeResult);
-
                 while (!_messageBuffer.Post(record))
                 {
                     Logger.Debug("message buffer full, blocking until available");
@@ -58,7 +72,7 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
                     _wasBlocked = false;
                 }
 
-                if (_recordsConsumed++ % 1000 == 0)
+                if (_recordsConsumed++ % _consumeReportInterval == 0)
                 {
                     Logger.Info($"{_recordsConsumed} total number of records consumed so far");
                 }
@@ -69,7 +83,7 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
 
     public void Complete()
     {
-        Console.WriteLine("Complete on the SourceBlock called");
+       Logger.Info("Complete on the SourceBlock called");
         _cancellationToken.Cancel();
         _consumer.Close();
         _consumer.Dispose();
