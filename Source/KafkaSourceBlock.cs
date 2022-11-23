@@ -59,6 +59,9 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
                 }
                 if (consumeResult == null) continue;
                 var record = new Record<byte[], byte[]>(consumeResult);
+                // Note that if the time spent in this section 
+                // exceeds the max.poll.timeout this consumer 
+                // will get removed from the group and a rebalance will occur
                 while (!_messageBuffer.Post(record))
                 {
                     Logger.Debug("message buffer full, blocking until available");

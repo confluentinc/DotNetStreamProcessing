@@ -85,7 +85,7 @@ public static class ProcessorFunctions<TKey, TValue>
   /// This Func represents a simulated remote service call
   /// </summary>
   /// <returns></returns>
-    public static Func<Record<string, Purchase>, Record<string, Purchase>> SimulatedRemoteService()
+    public static Func<Record<string, Purchase>, Record<string, Purchase>> SimulatedLongTimeService()
     {
         return (input) =>
         {
