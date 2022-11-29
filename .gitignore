@@ -4,5 +4,7 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .idea/
-confluent-props.txt
+kafka.properties
+cluster-details.json
+connector.json
 notes.txt

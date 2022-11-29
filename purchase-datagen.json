@@ -1,0 +1,9 @@
+{
+  "connector.class" : "DatagenSource",
+  "output.data.format" : "JSON",
+  "quickstart" : "PURCHASES",
+  "tasks.max" : "1",
+  "name" : "PurchasesDatagen",
+  "kafka.topic" : "tpl_input",
+  "max.interval" : "10"
+}
