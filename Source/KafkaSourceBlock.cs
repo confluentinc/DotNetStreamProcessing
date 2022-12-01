@@ -22,10 +22,10 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
     private readonly IConsumer<byte[], byte[]> _consumer;
     private readonly string _topic;
     private readonly CancellationTokenSource _cancellationToken;
+    private readonly int _consumeReportInterval;
     private const int RetryBackoff = 2000;
     private long _recordsConsumed;
     private bool _wasBlocked;
-    private int _consumeReportInterval;
 
     public KafkaSourceBlock(IConsumer<byte[], byte[]> consumer, 
         string topic, 
@@ -64,7 +64,7 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
                 // will get removed from the group and a rebalance will occur
                 while (!_messageBuffer.Post(record))
                 {
-                    Logger.Debug("message buffer full, blocking until available");
+                    Logger.Warn("message buffer full, blocking until available");
                     _wasBlocked = true;
                     Thread.Sleep(RetryBackoff);
                 }

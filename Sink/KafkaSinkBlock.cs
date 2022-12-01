@@ -35,14 +35,18 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
             {
                 var record = _messageBuffer.Receive(_cancellationToken.Token);
                 // The handler is used to pass a successfully produced record to the CommitObserver
-                Action<DeliveryReport<byte[], byte[]>> handler = async r =>
+                Action<DeliveryReport<byte[], byte[]>> handler = r =>
                 {
                     if (!r.Error.IsError)
+                    {
                         _commitObserver.OnNext(record);
+                    }
                     else
-                        Logger.Error( $"Delivery Error: {r.Error.Reason} will add to the block to retry");
-                    // Retrying the record that failed on the produce request
-                    await _messageBuffer.SendAsync(record);
+                    {
+                        Logger.Error($"Delivery Error: {r.Error.Reason} will add to the block to retry");
+                        // Retrying the record that failed on the produce request
+                        _messageBuffer.SendAsync(record);
+                    }
                 };     
                 
                 _producer.Produce(_outputTopic, new Message<byte[], byte[]>{ Key = record.Key, Value = record.Value}, handler);

@@ -70,7 +70,13 @@ public static class ProcessorFunctions<TKey, TValue>
         RandomNumberGenerator.Create();
         return (input) =>
         {
-            var jsonPurchase = JsonConvert.DeserializeObject<Dictionary<string, object>>(input.Value);
+            var jsonPurchase = JsonConvert.DeserializeObject<Dictionary<string, object>>(input.Value) ?? new Dictionary<string, object>
+            {
+                ["id"] = -1,
+                ["item_type"] = "null record",
+                ["quantity"] = -1
+
+            };
             var purchase = new Purchase()
             {
                 Id = (long) jsonPurchase["id"],

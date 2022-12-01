@@ -24,6 +24,8 @@ namespace TplKafka
     static class TplKafkaStreaming
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
+        private const int ReportInterval = 5000;
         static void Main(string[] args)
         {
             if (args.Length == 0)
@@ -43,12 +45,22 @@ namespace TplKafka
             consumerConfig.ClientId = "tplConsumer";
             consumerConfig.GroupId = "tplConsumerGroup";
             producerConfig.ClientId = "tplProducer";
-            
+
             var cancellationToken = new CancellationTokenSource();
 
-            var consumer = new ConsumerBuilder<byte[], byte[]>(consumerConfig).Build();
+            var consumer = new ConsumerBuilder<byte[], byte[]>(consumerConfig)
+                .SetPartitionsRevokedHandler((c, partitions) =>
+                {
+                  Logger.Info($"consumer {c.MemberId} had partitions {string.Join(",", partitions)} revoked");  
+                })
+                .SetPartitionsAssignedHandler((c, partitions) =>
+                {
+                    Logger.Info($"consumer {c.MemberId} had partitions {string.Join(",", partitions)} assigned"); 
+                })
+                .Build();
+                
             var producer = new ProducerBuilder<byte[], byte[]>(producerConfig).Build();
-            var commitObserver = new OffsetHandler(consumer);
+            var commitObserver = new OffsetHandler(consumer, ReportInterval);
 
             var desFunc = ProcessorFunctions<string, string>.DeserializeFunc(Deserializers.Utf8, Deserializers.Utf8);
             var protoSerFunc = ProcessorFunctions<string, Purchase>.SerializeProtoFunc(Serializers.Utf8);
@@ -74,7 +86,7 @@ namespace TplKafka
                 new TransformBlock<Record<string, Purchase>, Record<string, Purchase>>(timeConsumingTaskFunc,
                     parallelizationBlockOptions);
             
-            KafkaSourceBlock sourceBlock = new(consumer, "tpl_input", cancellationToken, 100_000);
+            KafkaSourceBlock sourceBlock = new(consumer, "tpl_input", cancellationToken, ReportInterval);
             Logger.Info("Starting the source block");
             sourceBlock.Start();
 
