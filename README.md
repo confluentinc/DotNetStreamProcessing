@@ -81,6 +81,26 @@ Execute the following command to remove the cluster, topics, and the datagen con
 ./teardown.sh
 ```
 
+### Application details
+
+This application simulates a workflow where the input events are a `Purchase` object.  It uses a [Quick Start Datagen Source Connector](https://docs.confluent.io/cloud/current/connectors/cc-datagen-source.html#datagen-source-connector-for-ccloud) to provide
+the input records with the following structure:
+```json
+{
+  "id": "long",
+  "item_type": "string",
+  "quantity": "long"
+}
+```
+
+The [purchase-datagen.json](purchase-datagen.json) file included in the project defines the required parameters for starting the datagen source connector.  The connector will produce
+a record approximately every 10 milliseconds.  To change the rate of records produced into the `tpl_input` topic you can update the `max.interval` field 
+on the `purchase-datagen.json` file to the desired value.
+
+Note that `build-cluster.sh` script generates a temporary `json` file for creating the connector via the command line.  This is done because an API key and secret are required
+and those values should never get committed into GitHub. 
+
+
 
 
 
