@@ -75,9 +75,9 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
                     _wasBlocked = false;
                 }
 
-                if (_recordsConsumed++ % _consumeReportInterval == 0)
+                if (++_recordsConsumed % _consumeReportInterval == 0)
                 {
-                    Logger.Info($"{_recordsConsumed} total number of records consumed so far");
+                    Logger.Info($"{_recordsConsumed} records consumed so far");
                 }
             }
             Logger.Info("Dropping out of consume loop");

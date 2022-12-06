@@ -1,8 +1,8 @@
 #!/bin/sh
 
 CLUSTER_NAME="dotnet-streaming-cluster"
-CLOUD="gcp"
-REGION="us-east1"
+CLOUD="${CLOUD:-gcp}"
+REGION="${REGION:-us-east1}"
 ENVIRONMENT="dotnet-streaming"
 
 echo "Creating an environment - $ENVIRONMENT"

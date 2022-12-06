@@ -53,8 +53,15 @@ There is a script [build-cluster.sh](build-cluster.sh) that will handle all the 
 a properties file `kafka.properties` used for connecting to Confluent Cloud. Git will ignore this file but it's important to make sure you don't accidentally check this file 
 in as it contains your cloud credentials.
 
+The build script defaults to using `gcp` and `us-east1` for the cloud provider and region respectively. 
+To use a different cloud provider and region, `aws` and `us-west-2` for example, execute the following before running the script:
+```text
+export CLOUD=aws
+export REGION=us-west-2
+```
+
 To run the application execute the following commands:
-1. `./build-cluster`
+1. `./build-cluster.sh`
 2. `dotnet clean && dotnet build`
 3. `dotnet run kafka.properties`
 

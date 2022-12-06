@@ -17,7 +17,8 @@ public class OffsetHandler : IObserver<Record<byte[], byte[]>>
     private readonly IConsumer<byte[], byte[]> _consumer;
     private readonly int _offsetsStoredReportInterval;
     private long _offsetStored;
-    
+    private Dictionary<int, long> _offsetTracker = new();
+
 
     public OffsetHandler(IConsumer<byte[], byte[]> consumer,
         int offsetsStoredReportInterval)
@@ -45,9 +46,13 @@ public class OffsetHandler : IObserver<Record<byte[], byte[]>>
         
         var tpOffset = new TopicPartitionOffset(processedRecord.TopicPartition, processedRecord.SourceOffset + 1);
         _consumer.StoreOffset(tpOffset);
-        if (_offsetStored++ % _offsetsStoredReportInterval == 0)
+        _offsetTracker[tpOffset.Partition.Value] = tpOffset.Offset.Value;
+        if (++_offsetStored % _offsetsStoredReportInterval == 0)
         {
-            Logger.Info($"{_offsetStored} number of records have been successfully processed and offsets stored latest is {tpOffset}");
+            Logger.Info($"{_offsetStored} records successfully processed and corresponding offsets committed");
+            var offsetReport = _offsetTracker.Aggregate("", (current, kv) => 
+                current + $"partition:{kv.Key}->offset[{kv.Value}], ");
+            Logger.Info($"{ offsetReport.TrimEnd(',', ' ')}");
         }
     }
 }
