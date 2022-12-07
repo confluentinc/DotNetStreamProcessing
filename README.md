@@ -60,6 +60,17 @@ export CLOUD=aws
 export REGION=us-west-2
 ```
 
+Here's some common regions for AWS, Azure and GCP consult the different cloud providers documentation for more complete region listings.
+
+|Provider | Region |
+|---------|--------|
+| aws     | us-east-1 |
+| aws     | us-west-2 |
+| azure   | eastus    |
+| azure   | westus    |
+| gcp     | us-east1  |
+| gcp     | us-west1  |
+
 To run the application execute the following commands:
 1. `./build-cluster.sh`
 2. `dotnet clean && dotnet build`
