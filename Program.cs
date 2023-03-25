@@ -45,6 +45,7 @@ namespace TplKafka
             consumerConfig.ClientId = "tplConsumer";
             consumerConfig.GroupId = "tplConsumerGroup";
             producerConfig.ClientId = "tplProducer";
+            producerConfig.Partitioner = Partitioner.Murmur2Random;
 
             var cancellationToken = new CancellationTokenSource();
 
