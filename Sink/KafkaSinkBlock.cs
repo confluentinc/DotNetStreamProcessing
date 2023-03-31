@@ -35,7 +35,7 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
             {
                 var record = _messageBuffer.Receive(_cancellationToken.Token);
                 // The handler is used to pass a successfully produced record to the CommitObserver
-                Action<DeliveryReport<byte[], byte[]>> handler = r =>
+                void DeliveryHandler(DeliveryReport<byte[], byte[]> r)
                 {
                     if (!r.Error.IsError)
                     {
@@ -47,9 +47,9 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
                         // Retrying the record that failed on the produce request
                         _messageBuffer.SendAsync(record);
                     }
-                };     
-                
-                _producer.Produce(_outputTopic, new Message<byte[], byte[]>{ Key = record.Key, Value = record.Value}, handler);
+                }
+
+                _producer.Produce(_outputTopic, new Message<byte[], byte[]>{ Key = record.Key, Value = record.Value}, DeliveryHandler);
             }
             Logger.Info("Dropping out of the produce loop");
         });

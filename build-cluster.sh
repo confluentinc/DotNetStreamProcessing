@@ -23,8 +23,8 @@ done
 
 echo "Creating cluster credentials"
 CLUSTER_CREDS=$(confluent api-key create --resource "$CLUSTER_ID" --environment "$ENV_ID" -o json);
-API_KEY=$(echo "${CLUSTER_CREDS}" | jq -r .key);
-API_SECRET=$(echo "${CLUSTER_CREDS}" | jq -r .secret);
+API_KEY=$(echo "${CLUSTER_CREDS}" | jq -r .api_key);
+API_SECRET=$(echo "${CLUSTER_CREDS}" | jq -r .api_secret);
 
 echo "Creating the input and output topics"
 confluent kafka topic create --cluster "$CLUSTER_ID" --environment "$ENV_ID" tpl_input
@@ -43,7 +43,7 @@ CONNECT_CONFIG=$(echo $CONNECT_CONFIG | jq '. + { "kafka.api.secret": "'${API_SE
 
 echo $CONNECT_CONFIG > connector.json
 
-CONNECTOR_ID=$(confluent connect create --config connector.json \
+CONNECTOR_ID=$(confluent connect cluster create --config-file connector.json \
   --cluster "$CLUSTER_ID"\
   --environment "$ENV_ID" -o json | jq -r .id)
 

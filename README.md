@@ -28,7 +28,7 @@ build with the .NET clients the TPL Dataflow library - feel free to experiment b
 
 * [.NET version 6.0 (or greater)](https://dotnet.microsoft.com/en-us/download)
 * A user account in [Confluent Cloud](https://www.confluent.io/confluent-cloud/tryfree/)
-* Local installation of [Confluent CLI](https://docs.confluent.io/confluent-cli/current/install.html) v2.34.0 or later
+* Local installation of [Confluent CLI](https://docs.confluent.io/confluent-cli/current/install.html) v3.0.0 or later
 * [jq](https://stedolan.github.io/jq/download/) - Used for the script to set-up Confluent Cloud
 * [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) **Windows only** The application was developed on macOS BigSur 11.2
 
