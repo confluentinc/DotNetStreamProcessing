@@ -11,7 +11,7 @@ namespace TplKafka.Sink;
 public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
 {
     private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
-    private readonly BufferBlock<Record<byte[], byte[]>> _messageBuffer = new();
+    private readonly BufferBlock<Record<byte[], byte[]>> _messageBuffer;
     private readonly IProducer<byte[], byte[]> _producer;
     private readonly string _outputTopic;
     private readonly  IObserver<Record<byte[],byte[]>>_commitObserver;
@@ -25,6 +25,8 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
         _outputTopic = outputTopic;
         _commitObserver = commitObserver;
         _cancellationToken = cancellationToken;
+        var sourceBlockOptions = new ExecutionDataflowBlockOptions() {BoundedCapacity = 10000};
+        _messageBuffer = new BufferBlock<Record<byte[], byte[]>>(sourceBlockOptions);
     }
 
     public void Start()
