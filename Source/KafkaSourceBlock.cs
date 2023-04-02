@@ -18,7 +18,7 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
 {
     private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
     
-    private readonly BufferBlock<Record<byte[], byte[]>> _messageBuffer = new();
+    private readonly BufferBlock<Record<byte[], byte[]>> _messageBuffer;
     private readonly IConsumer<byte[], byte[]> _consumer;
     private readonly string _topic;
     private readonly CancellationTokenSource _cancellationToken;
@@ -36,6 +36,8 @@ public class KafkaSourceBlock : ISourceBlock<Record<byte[], byte[]>>
         _topic = topic;
         _cancellationToken = cancellationToken;
         _consumeReportInterval = consumeReportInterval;
+        var sourceBlockOptions = new ExecutionDataflowBlockOptions() {BoundedCapacity = 10000};
+        _messageBuffer = new BufferBlock<Record<byte[], byte[]>>(sourceBlockOptions);
     }
 
     public void Start()
