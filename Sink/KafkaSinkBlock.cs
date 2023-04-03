@@ -25,8 +25,8 @@ public class KafkaSinkBlock : ITargetBlock<Record<byte[], byte[]>>
         _outputTopic = outputTopic;
         _commitObserver = commitObserver;
         _cancellationToken = cancellationToken;
-        var sourceBlockOptions = new ExecutionDataflowBlockOptions() {BoundedCapacity = 10000};
-        _messageBuffer = new BufferBlock<Record<byte[], byte[]>>(sourceBlockOptions);
+        var sinkBlockOptions = new ExecutionDataflowBlockOptions() {BoundedCapacity = 10000};
+        _messageBuffer = new BufferBlock<Record<byte[], byte[]>>(sinkBlockOptions);
     }
 
     public void Start()
